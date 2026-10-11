@@ -115,13 +115,18 @@ Text sources (news, Telegram, official statements) were deliberately left out: i
 
 ```bash
 pip install -r requirements.txt     # tested with Python 3.13, scikit-learn 1.9.1, pandas 3.0.5, numpy 2.5.3
-python -m pytest -q tests                                          # 11 passed, 1 skipped (~2 min)
-ALERTS_CSV=data/volunteer_data_en.csv python -m pytest -q tests    # 12 passed (includes the real-data test)
+python -m pytest -q tests                                          # 11 passed, 2 skipped (~2 min)
+ALERTS_CSV=data/volunteer_data_en.csv python -m pytest -q tests    # 13 passed, ~4 min (adds real-data tests)
 python run_eval.py --data data/volunteer_data_en.csv               # validation, ~5 min → results/val_*
 python analysis/analyze_val.py --data data/volunteer_data_en.csv   # validation ablation and slices, ~3 min
 python run_eval.py --data data/volunteer_data_en.csv --final-test  # test (reproduction; already run once)
 python analysis/summarize_test.py                                  # paired comparisons and test slices
+python predict_now.py --data data/volunteer_data_en.csv            # current forecast for all 21 oblasts, ~1 min
 ```
+
+### Forecast for a given moment
+
+`predict_now.py` retrains hgb from scratch on everything known at the forecast moment and prints, for every oblast, the probability of an alert start within 1 and 3 hours, next to the `clim_7d` baseline. By default the moment is the hour after the last record in the CSV. `--at "2026-10-05 18:00"` (Kyiv time) sets it explicitly, and `--out file.csv` saves the table. All events after the moment are dropped before the grid is built. `tests/test_predict_now.py` checks that corrupting everything after the moment does not change the forecast. To forecast the real present, download a fresh `volunteer_data_en.csv` from the dataset repository.
 
 For temporal early stopping, boosting passes `X_val`/`y_val` to `HistGradientBoostingClassifier.fit`. If your scikit-learn version does not support this, upgrade it.
 
@@ -130,6 +135,7 @@ For temporal early stopping, boosting passes `X_val`/`y_val` to `HistGradientBoo
 ```
 alerts/       code: config, data, grid (grid and labels), features, baselines, models, evaluate
 run_eval.py   validation or test run
+predict_now.py  forecast for a given moment
 analysis/     validation analysis and test summary
 tests/        leakage tests
 data/         snapshot of the volunteer dataset from 2026-10-11
